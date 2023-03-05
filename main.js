@@ -22,8 +22,8 @@
 
     var baseURL                 =           "https://www.manheim.co.uk";
     var loginURL                =           "https://www.manheim.co.uk/";
-    var userName                =           "support@gaukmedia.com";
-    var password                =           "GAUKMotors1234!";
+    var userName                =           "someusername";
+    var password                =           "somepassword";
     var location                =           "Colchester";
     var resultsURL              =           "https://www.manheim.co.uk/search?AuctionCentre%5B0%5D=" + location + "&IsKm=False";
 
@@ -145,16 +145,8 @@
     })();
 
     async function login(page){
-        await page.waitForSelector('.master-login-button.js-login-form-open');
-        await page.click('.master-login-button.js-login-form-open');
-        await page.waitForSelector('#loginForm\\.Email');
-        await page.type('#loginForm\\.Email', userName);
-        await page.type('#loginForm\\.Password', password);
-        // click and wait for navigation
-        await Promise.all([
-            page.click('input[type="submit"], [value="Login]"'),
-            page.waitForNavigation({ waitUntil: 'networkidle0'}),
-        ]);
+        
+        //LOGIN FUNCTION DISABLED IN SAMPLE FILE
     };
 
     const queryAllHref = async function (sel) {
@@ -179,174 +171,7 @@
 
 
     /**
-     * Get Car Item information
+     * THESE FUNCTIONS ARE DISABLED IN SAMPLE FILE
      */
-    const scrapeInformation = async function (url, catalogues) {
-        let lotDetails = {};
-        try {
-            qs.log(url)
-
-
-            const response = await page.goto(url, {
-                waitUntil: 'networkidle0',
-            });
-
-            if (response.status() === 200) {
-                qs.log('scrapping page:' + url);
-                lotDetails = await page.evaluate((catalogues) => {
-                    let lot = {};
-
-                    lot["name"] = $("h1.vehicle-details__title").text().trim();
-
-                    let properties = $("div.vehicle-details__properties").text().trim().split('-');
-                    if (properties.length === 4){
-                        lot["fuel"] = properties[1].trim();
-                        lot["gearbox"] = properties[0].trim();
-                    } else {
-                        lot["fuel"] = properties[0].trim();
-                    }
-
-                    lot["manufacturer"] = window.location.href.split('/')[4].replace('%20',' ');
-                    lot["model"] = window.location.href.split('/')[5].split('?')[0];
-
-                    let catalogueURLElement = document.querySelector('div.attending__item span.attending__text.tooltip__container a');
-                    if (catalogueURLElement !== null ){
-                        let catalogueURL = catalogueURLElement.href;
-                        if (catalogueURL in catalogues){
-                            lot['auction_date'] = catalogues[catalogueURL];
-                        }
-                    } else
-                        lot['auction_date'] = null;
-
-                    let imageList = document.querySelectorAll('.flexslider.flexslider__vehicle .slides li a');
-                    if(imageList.length !== 0){ //check if there is actually any image
-                        lot["images"] = Array.from(imageList)
-                            .map((e) => e.getAttribute('imagehigh'))
-                            .filter(e => e)
-                            .join(', ');
-                    }
-
-                    var details = {};
-
-                    var elemLabel = document.querySelectorAll('div[class="vehicle-details__block vdb"] .vdb__item .vdb__label');
-                    var elemValue = document.querySelectorAll('div[class="vehicle-details__block vdb"] .vdb__item .vdb__value');
-                    for (var indx = 0; indx < elemLabel.length; indx++) {
-                        var header = elemLabel[indx].innerText.trim();
-                        details[header] = elemValue[indx].innerText.trim();
-                    }
-
-                    if (details["MFR YEAR"]) {
-                        lot["year"] = details["MFR YEAR"];
-                    }
-                    if (details["COLOUR"]) {
-                        lot["colour"] = details["COLOUR"];
-                    }
-                    if (details["NO OF SEATS"]) {
-                        lot["seats"] = details["NO OF SEATS"];
-                    }
-                    if (details["REG NO"]) {
-                        lot["registration"] = details["REG NO"];
-                    }
-                    //TODO check if odometer should save anything else
-                    if (details["ODOMETER"]) {
-                        lot["mileage"] = details["ODOMETER"].split(' ')[0];
-                    }
-
-                    return lot;
-                }, catalogues);
-
-                if(lotDetails['auction_date'] === undefined)
-                    lotDetails['auction_date'] = await getAuctionDate(page, catalogues);
-
-            } else {
-                lotDetails = {}
-            }
-            lotDetails = {
-                source: {
-                    url: url,
-                    date: new Date().toUTCString(),
-                    status: response.status()
-                },
-                data: lotDetails
-            };
-
-            if (lotDetails["data"]["auction_date"] !== null){
-                if(lotDetails["data"]['images'] !== undefined){
-                    qs.scrapeDataLog.saveData(lotDetails);
-                } else {
-                    //console.log(`Images are coming undefined in lotdetails......`)
-                    //console.log(`url : ${url}`)
-                    qs.log(`Images are coming undefined in lotdetails......`)
-                    qs.log(`url : ${url}`)
-                }
-            } else {
-                //console.log(`auction_date is coming null.....`)
-                //console.log(`url : ${url}`)
-                qs.log(`auction_date is coming null.....`)
-                qs.log(`url : ${url}`)
-            }
-
-        } catch (e) {
-            qs.log('Skipped url because timeout or removed url...');
-            qs.log(e)
-        }
-    };
-
-    async function getAuctionDate(page, catalogues){
-        let catalogueURL = await page.evaluate(() =>{
-            return document.querySelector('div.attending__item span.attending__text.tooltip__container a').href;
-        });
-
-        await page.goto(catalogueURL);
-
-        let months = {
-            "Jan": "01",
-            "Feb": "02",
-            "Mar": "03",
-            "Apr": "04",
-            "May": "05",
-            "Jun": "06",
-            "June": "06",
-            "Jul": "07",
-            "July": "07",
-            "Aug": "08",
-            "Sep": "09",
-            "Oct": "10",
-            "Nov": "11",
-            "Dec": "12"
-        }
-
-        await page.waitForSelector('.ed__date__item');
-        let today = new Date();
-        let day = await page.$eval('.ed__date__item .date', e => e.textContent.slice(0, 2));
-        let month = await page.$eval('.ed__date__item .month', e => e.textContent);
-        month = months[month];
-        let year = (today.getMonth() === 11 && month === "01") ? today.getFullYear() + 1 : today.getFullYear(); //checks if the scraping is being done in december and the auction is going to be in january to determine the year
-        let time = await page.$eval('.ed__date__item .time', e => e.textContent);
-
-        let final_date = `${year}-${month}-${day} ${time}:00`;
-
-        catalogues[catalogueURL] = final_date;
-
-        return final_date;
-    }
-
-
-    async function autoScroll(page){
-        await page.evaluate(async () => {
-            await new Promise((resolve) => {
-                var totalHeight = 0;
-                var distance = 100;
-                var timer = setInterval(() => {
-                    var scrollHeight = document.body.scrollHeight;
-                    window.scrollBy(0, distance);
-                    totalHeight += distance;
-
-                    if(totalHeight >= scrollHeight - window.innerHeight){
-                        clearInterval(timer);
-                        resolve();
-                    }
-                }, 100);
-            });
-        });
-    }
+    
+   
